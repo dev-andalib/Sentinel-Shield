@@ -4,7 +4,7 @@ from sklearn.cluster import KMeans
 
 
 print("Loading the Sentence Transformer model ")
-model = SentenceTransformer('all-MiniLM-L6-v2') # context analysis
+context_gen = SentenceTransformer('all-MiniLM-L6-v2') # context analysis
 print("Model loaded.")
 
 
@@ -16,7 +16,7 @@ df = df.drop('source', axis=1)
 # --- 3. Generate Embeddings ---
 print("Generating embeddings for all texts...")
 # The .encode() method converts our text into numerical vectors
-embeddings = model.encode(df['text'].tolist())
+embeddings = context_gen.encode(df['text'].tolist())
 print(f"Generated {len(embeddings)} embeddings.")
 
 # --- 4. Perform Clustering ---

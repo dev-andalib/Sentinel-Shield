@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from transformers import pipeline
+from model import context_gen
 
 # Initialize the Flask app
 app = Flask(__name__)
@@ -8,7 +9,7 @@ app = Flask(__name__)
 # This pipeline simplifies the process to a few lines of code [cite: 14]
 # We'll use a pre-trained model for toxicity detection.
 print("Loading AI model...")
-classifier = pipeline("text-classification", model="unitary/toxic-bert")
+classifier = context_gen
 print("Model loaded successfully!")
 
 # Define the API endpoint for analysis

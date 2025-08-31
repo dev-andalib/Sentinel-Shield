@@ -1,6 +1,6 @@
 // !!! IMPORTANT !!!
 // Paste your Ngrok public URL here
-const BACKEND_URL = 'https://8cc74488deaf.ngrok-free.app';
+const BACKEND_URL = 'https://a2fee360660f.ngrok-free.app';
 
 // Function to check content and apply mask if necessary
 const processTweet = async (tweetElement) => {
