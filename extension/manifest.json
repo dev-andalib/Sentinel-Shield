@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Sentinel Shield",
+  "version": "1.0",
+  "description": "A browser extension for real-time content analysis and masking.",
+  "permissions": [
+    "storage" 
+  ],
+  "host_permissions": [
+    "*://*.x.com//*" 
+  ],
+  "action": {
+    "default_popup": "popup.html" 
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.x.com/*"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ]
+}
