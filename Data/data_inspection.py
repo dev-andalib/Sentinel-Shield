@@ -43,9 +43,9 @@ print(df_final.sample(50))
 
 
 # convert to parquet
-df.to_parquet('your_data.parquet', index=False)
+df_final.to_parquet('Data.parquet', index=False)
 
-print("\nSuccessfully exported DataFrame to 'your_data.parquet'")
+print("\nSuccessfully exported DataFrame to 'Data.parquet'")
 
 # To prove it worked, you can read it back
 df_read = pd.read_parquet('Data.parquet')

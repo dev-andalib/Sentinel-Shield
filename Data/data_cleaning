@@ -1,0 +1,214 @@
+path = 'C:/Users/andal/Documents/projects/SAFEGUARD/Data/Data.parquet'
+df = pd.read_parquet(path)
+
+
+
+from symspellpy import SymSpell, Verbosity
+import re
+from multiprocessing import Pool, cpu_count
+import pandas as pd
+import numpy as np 
+
+# Set the option to display all columns. 'None' means unlimited.
+pd.set_option('display.max_columns', None)
+
+# Set the option to display the full content of each column.
+pd.set_option('display.max_colwidth', None)
+
+# Optional: Set the display width to prevent line wrapping in the console
+pd.set_option('display.width', 1000)
+
+df = df.drop_duplicates(subset=['post_id'], keep='first')
+
+
+
+chat_words = {
+    "AFAIK": "As Far As I Know",
+    "AFK": "Away From Keyboard",
+    "ASAP": "As Soon As Possible",
+    "ATK": "At The Keyboard",
+    "ATM": "At The Moment",
+    "A3": "Anytime, Anywhere, Anyplace",
+    "BAK": "Back At Keyboard",
+    "BBL": "Be Back Later",
+    "BBS": "Be Back Soon",
+    "BFN": "Bye For Now",
+    "B4N": "Bye For Now",
+    "BRB": "Be Right Back",
+    "BRT": "Be Right There",
+    "BTW": "By The Way",
+    "B4": "Before",
+    "B4N": "Bye For Now",
+    "CU": "See You",
+    "CUL8R": "See You Later",
+    "CYA": "See You",
+    "FAQ": "Frequently Asked Questions",
+    "FC": "Fingers Crossed",
+    "FWIW": "For What It's Worth",
+    "FYI": "For Your Information",
+    "GAL": "Get A Life",
+    "GG": "Good Game",
+    "GN": "Good Night",
+    "GMTA": "Great Minds Think Alike",
+    "GR8": "Great!",
+    "G9": "Genius",
+    "IC": "I See",
+    "ICQ": "I Seek you (also a chat program)",
+    "ILU": "ILU: I Love You",
+    "IMHO": "In My Honest/Humble Opinion",
+    "IMO": "In My Opinion",
+    "IOW": "In Other Words",
+    "IRL": "In Real Life",
+    "KISS": "Keep It Simple, Stupid",
+    "LDR": "Long Distance Relationship",
+    "LMAO": "Laugh My A.. Off",
+    "LOL": "Laughing Out Loud",
+    "LTNS": "Long Time No See",
+    "L8R": "Later",
+    "MTE": "My Thoughts Exactly",
+    "M8": "Mate",
+    "NRN": "No Reply Necessary",
+    "OIC": "Oh I See",
+    "PITA": "Pain In The A..",
+    "PRT": "Party",
+    "PRW": "Parents Are Watching",
+    "QPSA?": "Que Pasa?",
+    "ROFL": "Rolling On The Floor Laughing",
+    "ROFLOL": "Rolling On The Floor Laughing Out Loud",
+    "ROTFLMAO": "Rolling On The Floor Laughing My A.. Off",
+    "SK8": "Skate",
+    "STATS": "Your sex and age",
+    "ASL": "Age, Sex, Location",
+    "THX": "Thank You",
+    "TTFN": "Ta-Ta For Now!",
+    "TTYL": "Talk To You Later",
+    "U": "You",
+    "U2": "You Too",
+    "U4E": "Yours For Ever",
+    "WB": "Welcome Back",
+    "WTF": "What The F...",
+    "WTG": "Way To Go!",
+    "WUF": "Where Are You From?",
+    "W8": "Wait...",
+    "7K": "Sick:-D Laugher",
+    "TFW": "That feeling when",
+    "MFW": "My face when",
+    "MRW": "My reaction when",
+    "IFYP": "I feel your pain",
+    "TNTL": "Trying not to laugh",
+    "JK": "Just kidding",
+    "IDC": "I don't care",
+    "ILY": "I love you",
+    "IMU": "I miss you",
+    "ADIH": "Another day in hell",
+    "ZZZ": "Sleeping, bored, tired",
+    "WYWH": "Wish you were here",
+    "TIME": "Tears in my eyes",
+    "BAE": "Before anyone else",
+    "FIMH": "Forever in my heart",
+    "BSAAW": "Big smile and a wink",
+    "BWL": "Bursting with laughter",
+    "BFF": "Best friends forever",
+    "CSL": "Can't stop laughing"
+}
+
+
+
+CONTRACTION_MAP = {
+    "dont": "don't", "isnt": "isn't", "arent": "aren't", "wasnt": "wasn't",
+    "werent": "weren't", "havent": "haven't", "hasnt": "hasn't", "hadnt": "hadn't",
+    "wont": "won't", "wouldnt": "wouldn't", "cant": "can't", "couldnt": "couldn't",
+    "shouldnt": "shouldn't", "mightnt": "mightn't", "mustnt": "mustn't",
+    "im": "i'm", "youre": "you're", "hes": "he's", "shes": "she's", "its": "it's",
+    "theyre": "they're", "weve": "we've", "youve": "you've", "theyve": "they've",
+    "ive": "i've", "theres": "there's", "whats": "what's", "wheres": "where's",
+    "whos": "who's", "whens": "when's", "whys": "why's", "hows": "how's",
+    "whatll": "what'll", "shell": "she'll", "hell": "he'll", "youll": "you'll",
+    "ill": "i'll", "theyll": "they'll", "wholl": "who'll",
+    "yall": "you all"
+}
+
+class MockSymSpell:
+    def lookup(self, word, verbosity, max_edit_distance):
+        class Suggestion:
+            def __init__(self, term):
+                self.term = term
+        if word == "nawt": return [Suggestion("not")]
+        return [Suggestion(word)] if word else []
+sym_spell = MockSymSpell()
+
+def removeUrl(t):
+    text = re.compile(r'https?://\S+|www\.\S+')
+    return text.sub(r'', t)
+
+def removeHtmlTags(t):
+    pattern = re.compile('<.*?>')
+    return pattern.sub(r' ', t)
+
+def chat_conversion(text):
+    new_text = []
+    for i in text.split():
+        if i.upper() in chat_words:
+            new_text.append(chat_words[i.upper()])
+        else:
+            new_text.append(i)
+    return " ".join(new_text)
+
+def correct_spelling(text):
+    corrected_words = []
+    # Verbosity and max_edit_distance would be part of your actual SymSpell setup
+    # from symspellpy import Verbosity
+    for word in text.split():
+        # suggestions = sym_spell.lookup(word, Verbosity.CLOSEST, max_edit_distance=2)
+        suggestions = sym_spell.lookup(word, "verbosity", 2) # Using mock object
+        if suggestions:
+            corrected_words.append(suggestions[0].term)
+        else:
+            corrected_words.append(word)
+    return " ".join(corrected_words)
+
+
+def expand_contractions(text, contraction_mapping=CONTRACTION_MAP):
+    """Expands common contractions like 'dont' to 'don't'."""
+    # Using regex to ensure we match whole words only
+    for word, expansion in contraction_mapping.items():
+        text = re.sub(r'\b' + re.escape(word) + r'\b', expansion, text)
+    return text
+
+def normalize_text(text):
+    return text.replace("’", "'").replace("`", "'").replace("“", '"').replace("”", '"')
+
+
+
+
+def preprocess_text(text):
+    """
+    A master function to clean text, now including emoji removal.
+    """
+    # Start with emoji removal
+    
+    
+    # Continue with your other cleaning functions
+    clean_text = removeUrl(text)
+    clean_text = removeHtmlTags(clean_text)
+    clean_text = chat_conversion(clean_text)
+    
+    clean_text = correct_spelling(clean_text)
+    clean_text = clean_text.lower()
+    clean_text = normalize_text(clean_text)
+    clean_text = expand_contractions(clean_text) 
+    
+    # Normalize whitespace to remove extra spaces
+    return ' '.join(clean_text.split())
+
+# --- Parallel Processing Setup ---
+def parallel_preprocess(texts):
+    with Pool(cpu_count()) as p:
+        processed_texts = p.map(preprocess_text, texts)
+    return processed_texts
+
+
+
+df['text'] = parallel_preprocess(df['text'].tolist())
+df.to_parquet("Final_Trauma_Data", index=False)
+df.head(5)
