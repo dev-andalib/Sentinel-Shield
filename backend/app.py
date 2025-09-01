@@ -6,6 +6,9 @@ from flask_cors import CORS
 import os
 from typing import Dict, List, Optional
 
+# Global counter for API calls
+api_call_counter = 0
+
 # Gemini imports
 import google.generativeai as genai
 import time
@@ -46,7 +49,7 @@ class RateLimiter:
 gemini_limiter = RateLimiter()
 
 # Configure Gemini with API key
-GOOGLE_API_KEY = 'AIzaSyAd1dtQobqAV21ohT1ZLSlAeWOxaubsBog'
+GOOGLE_API_KEY = 'AIzaSyBFbwXEgqZq4BXAeXthpoTHDZKHhsfL_l8'
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable is required")
@@ -190,6 +193,10 @@ def clean_text(text):
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
 
+# Endpoint to get API call count
+@app.route('/api-calls', methods=['GET'])
+def get_api_calls():
+    return jsonify({"total_api_calls": api_call_counter})
 
 # Load the AI model from Hugging Face
 # This pipeline simplifies the process to a few lines of code [cite: 14]
@@ -348,8 +355,13 @@ def generate_trigger_concepts_gemini(user_story: str) -> List[str]:
 # Define the API endpoint for analysis
 @app.route('/analyze', methods=['POST'])
 def analyze_text():
+    global api_call_counter
+    api_call_counter += 1
+    
     data = request.get_json()
     print(f"\n✅ 1. RECEIVED DATA: {data}")
+    print(f"📊 Total API calls: {api_call_counter}")
+    
     if not data or 'text' not in data:
         return jsonify({"error": "Invalid input, 'text' field is required."}), 400
 
@@ -384,7 +396,7 @@ def analyze_text():
     max_score = cosine_scores.max().item()
 
     # Check if the score is greater than the threshold
-    threshold = 0.5
+    threshold = 0.6
 
     # --- Step 4: Log the result and decision ---
     print(f"🧠 3. CALCULATED SCORE: {max_score:.4f} (Threshold: {threshold})")
@@ -395,6 +407,7 @@ def analyze_text():
         print(f"Generated explanation: {explanation}")  # Debug log
         response_data = {
             "status": "flagged",
+            "api_calls": api_call_counter,
             "action": "mask",
             "reason": f"Content matches your triggers (confidence: {max_score:.2f})",
             "explanation": explanation,

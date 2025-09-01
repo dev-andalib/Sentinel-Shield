@@ -4,17 +4,33 @@
 // Paste your Ngrok public URL here (no leading/trailing spaces)
 const BACKEND_URL = 'https://21b4f3dad6cd.ngrok-free.app';
 
+// Set to store processed tweet IDs
+const processedTweets = new Set();
+let currentTweetIndex = 0;
+const MAX_TWEETS_TO_CHECK = 40;
+
 /**
  * Processes a single tweet element to check if its content should be masked.
  * It sends the tweet's text and the user's custom keywords to the backend for analysis.
  * @param {HTMLElement} tweetElement The HTML element representing the tweet.
+ * @param {number} index The index of the tweet in the current view
  */
-const processTweet = async (tweetElement) => {
-    // Only process if not currently being checked
-    if (tweetElement.dataset.sentinelChecked === 'checking') return;
+const processTweet = async (tweetElement, index) => {
+    // Get tweet ID from the article element
+    const tweetId = tweetElement.querySelector('time')?.closest('a')?.href?.split('/status/')?.[1];
+    
+    // Skip if tweet has already been processed or is currently being checked
+    if (!tweetId || 
+        processedTweets.has(tweetId) || 
+        tweetElement.dataset.sentinelChecked === 'checking' ||
+        index > MAX_TWEETS_TO_CHECK) {
+        return;
+    }
     
     // Mark as being checked to prevent concurrent checks
     tweetElement.dataset.sentinelChecked = 'checking';
+    // Add to processed tweets set
+    processedTweets.add(tweetId);
 
     const textContent = tweetElement.innerText;
     if (!textContent) return;
@@ -130,11 +146,16 @@ const observer = new MutationObserver((mutationsList) => {
             mutation.addedNodes.forEach(node => {
                 // Check if the added node is a tweet itself
                 if (node.nodeType === 1 && node.matches('[data-testid="tweet"]')) {
-                    processTweet(node);
+                    currentTweetIndex++;
+                    processTweet(node, currentTweetIndex);
                 }
                 // Check for any tweets nested within the added node
                 if (node.querySelectorAll) {
-                    node.querySelectorAll('[data-testid="tweet"]').forEach(processTweet);
+                    const tweets = Array.from(node.querySelectorAll('[data-testid="tweet"]'));
+                    tweets.forEach((tweet, idx) => {
+                        currentTweetIndex++;
+                        processTweet(tweet, currentTweetIndex);
+                    });
                 }
             });
         }
