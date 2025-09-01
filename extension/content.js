@@ -1,59 +1,59 @@
 // !!! IMPORTANT !!!
 // Paste your Ngrok public URL here
-const BACKEND_URL = 'https://a2fee360660f.ngrok-free.app';
+const BACKEND_URL = ' https://8b8056554119.ngrok-free.app';
 
-// Function to check content and apply mask if necessary
+/**
+ * Processes a single tweet element to check if its content should be masked.
+ * It sends the tweet's text and the user's custom keywords to the backend for analysis.
+ * @param {HTMLElement} tweetElement The HTML element representing the tweet.
+ */
 const processTweet = async (tweetElement) => {
-    // Avoid processing already masked tweets
+    // Avoid processing tweets that have already been checked
     if (tweetElement.dataset.sentinelChecked) return;
     tweetElement.dataset.sentinelChecked = 'true';
 
     const textContent = tweetElement.innerText;
     if (!textContent) return;
 
-    let isHarmful = false;
-    let reason = '';
+    try {
+        // 1. Get the user's custom input from storage
+        const { userExperiences } = await chrome.storage.local.get(['userExperiences']);
 
-    // 1. Check against user's custom keywords [cite: 43]
-    const { blockedKeywords } = await chrome.storage.local.get(['blockedKeywords']);
-    if (blockedKeywords && blockedKeywords.length > 0) {
-        for (const keyword of blockedKeywords) {
-            if (textContent.toLowerCase().includes(keyword.toLowerCase())) {
-                isHarmful = true;
-                reason = `This content was hidden because it contains the keyword: "${keyword}"`;
-                break;
-            }
+        // 2. Prepare the data payload, including both the tweet text and keywords
+        const payload = {
+            text: textContent,
+            keywords:  userExperiences || "" // Send keywords or an empty array
+        };
+
+        // 3. Send the combined payload to the backend for a decision
+        const response = await fetch(`${BACKEND_URL}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        // 4. If the backend decides to mask, apply the mask with the reason it provides
+        //    (Example backend response: { "action": "mask", "reason": "..." })
+        if (data.action === 'mask') {
+            const reason = data.reason || 'This content was hidden by Sentinel Shield.';
+            maskContent(tweetElement, reason);
         }
-    }
 
-    // 2. If not harmful yet, check with the AI backend [cite: 44]
-    if (!isHarmful) {
-        try {
-            // Use fetch() to send text to your backend [cite: 24]
-            const response = await fetch(BACKEND_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: textContent })
-            });
-            const data = await response.json(); // It will respond with JSON [cite: 25]
-            if (data.label === 'toxic') {
-                isHarmful = true;
-                reason = 'This content was flagged as potentially toxic by Sentinel Shield.';
-            }
-        } catch (error) {
-            console.error('Sentinel Shield: Error contacting backend.', error);
-        }
-    }
-
-    // 3. If harmful, apply the mask
-    if (isHarmful) {
-        maskContent(tweetElement, reason);
+    } catch (error) {
+        console.error('Sentinel Shield: Error contacting backend.', error);
     }
 };
 
-// Function to create and apply the visual mask [cite: 52]
+/**
+ * Creates and applies a visual mask over a given element.
+ * The mask displays a reason for hiding the content and a button to reveal it.
+ * @param {HTMLElement} tweetElement The element to apply the mask to.
+ * @param {string} reason The reason the content is being masked.
+ */
 const maskContent = (tweetElement, reason) => {
-    // The tweet's main div needs relative positioning for the absolute mask
+    // Relative positioning is needed for the absolutely positioned mask to work correctly
     tweetElement.style.position = 'relative';
 
     const mask = document.createElement('div');
@@ -63,30 +63,36 @@ const maskContent = (tweetElement, reason) => {
         <button class="sentinel-mask-button">Show Content</button>
     `;
 
-    // Add event listener to the "Show" button [cite: 56]
+    // Add a click event listener to the "Show Content" button to remove the mask
     mask.querySelector('.sentinel-mask-button').addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevents click from going to the tweet itself
-        mask.remove(); // Deletes the mask, revealing the original content [cite: 57]
+        e.stopPropagation(); // Prevent the click from affecting underlying elements
+        mask.remove(); // Remove the mask to reveal the original content
     });
 
-    // Append the mask as a child of the tweet element [cite: 58]
+    // Add the mask as a child to the tweet element
     tweetElement.appendChild(mask);
 };
 
-// Use MutationObserver to detect new tweets as the user scrolls [cite: 22]
+/**
+ * Uses a MutationObserver to detect when new nodes are added to the page,
+ * allowing the script to process new tweets as they are loaded dynamically.
+ */
 const observer = new MutationObserver((mutationsList) => {
     for (const mutation of mutationsList) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
             mutation.addedNodes.forEach(node => {
+                // Check if the added node is a tweet itself
                 if (node.nodeType === 1 && node.matches('[data-testid="tweet"]')) {
                     processTweet(node);
                 }
-                // Also check for tweets inside the newly added nodes
-                node.querySelectorAll('[data-testid="tweet"]').forEach(processTweet);
+                // Check for any tweets nested within the added node
+                if (node.querySelectorAll) {
+                    node.querySelectorAll('[data-testid="tweet"]').forEach(processTweet);
+                }
             });
         }
     }
 });
 
-// Start observing the main timeline area of the page
+// Start observing the entire document body for changes to the DOM
 observer.observe(document.body, { childList: true, subtree: true });

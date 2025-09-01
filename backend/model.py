@@ -1,5 +1,5 @@
 import pandas as pd
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
 
 
