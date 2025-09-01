@@ -2,7 +2,6 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
 
-
 print("Loading the Sentence Transformer model ")
 context_gen = SentenceTransformer('all-MiniLM-L6-v2') # context analysis
 print("Model loaded.")

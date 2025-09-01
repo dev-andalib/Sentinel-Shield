@@ -37,3 +37,51 @@
 .sentinel-mask-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* Styles for the explanation panel */
+.sentinel-explanation-panel {
+  width: 90%;
+  max-width: 400px;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: rgba(40, 40, 40, 0.95);
+}
+
+.sentinel-explanation-text {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  color: #ffffff;
+  text-align: left;
+}
+
+.sentinel-show-explanation-button {
+  padding: 8px 16px;
+  border: 1px solid #4a9eff;
+  background-color: transparent;
+  color: #4a9eff;
+  cursor: pointer;
+  border-radius: 15px;
+  font-weight: bold;
+  margin: 10px;
+  display: inline-block;
+}
+
+.sentinel-show-explanation-button:hover {
+  background-color: rgba(74, 158, 255, 0.1);
+}
+
+.sentinel-back-button {
+  padding: 8px 16px;
+  border: 1px solid #888;
+  background-color: transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 15px;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.sentinel-back-button:hover {
+  background-color: rgba(136, 136, 136, 0.1);
+}
